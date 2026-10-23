@@ -31,7 +31,7 @@
  */
 
 /** URL del proyecto. Ejemplo: 'https://abcdefghijklm.supabase.co' */
-const SUPABASE_URL = '';
+const SUPABASE_URL = 'https://txzfahmqoskgbxbozeku.supabase.co';
 
 /** Clave pública "anon". Es un texto largo que empieza con 'eyJ...'. */
 const SUPABASE_ANON_KEY = '';
