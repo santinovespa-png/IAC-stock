@@ -13,25 +13,26 @@
  * 1. Entrá a https://supabase.com y creá un proyecto (plan gratuito).
  * 2. En el panel del proyecto: Settings (el engranaje) → API.
  * 3. Copiá los dos valores:
- *      - "Project URL"        -> va en SUPABASE_URL
- *      - "anon" / "public"    -> va en SUPABASE_ANON_KEY
+ *      - "Project URL"                  -> va en SUPABASE_URL
+ *      - "Clave publicable" / "anon"    -> va en SUPABASE_ANON_KEY
  * 4. Pegalos abajo entre las comillas, guardá y subí el cambio a GitHub.
  *
  * ---------------------------------------------------------------------------
  * ¿ES SEGURO QUE ESTA CLAVE ESTÉ A LA VISTA?
  *
- * Sí. La clave "anon" está pensada para vivir en el navegador y no da acceso
- * por sí sola: la protección real son las políticas de seguridad (RLS) que
- * crea el archivo supabase/schema.sql, que exigen haber iniciado sesión para
- * leer o escribir cualquier dato.
+ * Sí. La clave publicable está pensada para vivir en el navegador y no da
+ * acceso por sí sola: la protección real son las políticas de seguridad (RLS)
+ * que crea el archivo supabase/schema.sql, que exigen haber iniciado sesión
+ * para leer o escribir cualquier dato. Por eso también tiene que quedar
+ * apagado el registro público de usuarios y el ingreso anónimo.
  *
- * Lo que NUNCA hay que poner acá es la clave "service_role": esa sí saltea
- * todas las protecciones. Si alguna vez la pegás por error, andá al panel de
- * Supabase y regenerala de inmediato.
+ * Lo que NUNCA hay que poner acá es la clave secreta ("sb_secret_..." o
+ * "service_role"): esa sí saltea todas las protecciones. Si alguna vez la
+ * pegás por error, andá al panel de Supabase y regenerala de inmediato.
  */
 
 /** URL del proyecto. Ejemplo: 'https://abcdefghijklm.supabase.co' */
 const SUPABASE_URL = 'https://txzfahmqoskgbxbozeku.supabase.co';
 
-/** Clave pública "anon". Es un texto largo que empieza con 'eyJ...'. */
-const SUPABASE_ANON_KEY = '';
+/** Clave publicable: empieza con 'sb_publishable_...' (o 'eyJ...' si es del formato viejo). */
+const SUPABASE_ANON_KEY = 'sb_publishable_qahCCv87Hy0sMrUk5IXrEw_GSB4U2co';
