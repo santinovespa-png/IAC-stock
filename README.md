@@ -33,18 +33,26 @@ tiene su propia copia**: lo que cargás en el celular no aparece en la PC.
 Para que todos vean el mismo stock hay que crear una base en Supabase. Es
 gratis y lleva unos diez minutos, **una sola vez**.
 
-### Paso 1 — Crear el proyecto
+### Paso 1 — Crear la organización y el proyecto
 
 1. Entrá a <https://supabase.com> y creá una cuenta (podés usar tu cuenta de GitHub).
-2. **New project**.
-3. Completá:
-   - **Name**: `iac-stock`
-   - **Database Password**: generá una y **guardala**; no la vas a necesitar para
-     la app, pero sí si algún día entrás a la base directamente.
+2. La primera vez te pide crear una **organización** antes que nada:
+   **New organization** →
+   - **Name**: `IAC INTERNACIONAL` (es sólo un rótulo interno)
+   - **Type**: `Company` o `Personal`, da igual
+   - **Plan**: **Free — $0/month**
+3. Ya dentro de la organización: **New project**. Completá:
+   - **Project name**: `iac-stock`
+   - **Database Password**: usá *Generate a password* y **guardala** en un lugar
+     seguro. No hace falta para la app, pero no se puede recuperar después.
    - **Region**: `South America (São Paulo)`, que es la más cercana.
 4. **Create new project** y esperá un par de minutos a que termine de armarse.
 
 ### Paso 2 — Crear las tablas
+
+> Si el navegador te traduce la página automáticamente, desactivalo para esta
+> parte (clic derecho → *Mostrar siempre en inglés*). Las traducciones
+> automáticas renombran los botones y es fácil equivocarse.
 
 1. En el menú lateral: **SQL Editor** → **New query**.
 2. Abrí el archivo `supabase/schema.sql` de este repositorio, copiá **todo** el
