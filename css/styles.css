@@ -1125,3 +1125,401 @@ dialog.modal::backdrop { background: rgba(8, 11, 28, .58); }
   body { background: #fff; }
   .card { box-shadow: none; }
 }
+
+/* ==========================================================================
+   7. PANTALLAS Y COMPONENTES AGREGADOS EN LA VERSION 2
+      (login, sincronizacion, stock en unidades, carga rapida)
+   ========================================================================== */
+
+/* ------------------------- Pantalla de carga ---------------------------- */
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+}
+
+.splash[hidden] { display: none; }
+
+.splash__box { text-align: center; color: var(--text-2); }
+
+.splash__logo {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 18px;
+  border-radius: 13px;
+  background: var(--brand);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 17px;
+}
+
+.splash__spinner {
+  width: 26px;
+  height: 26px;
+  margin: 0 auto 12px;
+  border: 2.5px solid var(--border-strong);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: girar .7s linear infinite;
+}
+
+:root[data-theme="dark"] .splash__spinner { border-top-color: var(--accent); }
+
+@keyframes girar { to { transform: rotate(360deg); } }
+
+.splash p { margin: 0; font-size: 13px; }
+
+/* --------------------------- Login -------------------------------------- */
+
+.login {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background:
+    radial-gradient(1100px 520px at 50% -10%, rgba(66, 165, 245, .22), transparent 70%),
+    var(--bg);
+  overflow-y: auto;
+}
+
+.login[hidden] { display: none; }
+
+.login__card {
+  width: min(420px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.login__brand { display: flex; align-items: center; gap: 13px; margin-bottom: 4px; }
+
+.login__logo {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  border-radius: 11px;
+  background: var(--brand);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.login__brand h1 { font-size: 15px; line-height: 1.2; }
+.login__brand p { margin: 2px 0 0; font-size: 12px; color: var(--text-2); }
+
+.login__btn { width: 100%; padding: 11px; font-size: 14px; }
+
+.login__error {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border: 1px solid var(--danger);
+  font-size: 12.5px;
+}
+
+.login__error[hidden] { display: none; }
+
+.login__pie {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-3);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ------------------- Aviso de estado de sincronizacion ------------------- */
+
+.sync-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 20px;
+  background: var(--warning-bg);
+  color: var(--warning);
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+}
+
+.sync-banner[hidden] { display: none; }
+
+.sync-banner > div { flex: 1 1 auto; }
+
+.sync-banner--error { background: var(--danger-bg); color: var(--danger-text); }
+.sync-banner--ok { background: var(--ok-bg); color: var(--ok); }
+
+.sync-banner__close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: .7;
+  font-size: 13px;
+  flex: 0 0 auto;
+}
+
+.sync-banner__close:hover { opacity: 1; }
+
+/* ------------------------ Usuario en el header -------------------------- */
+
+.header__user {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 6px 5px 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text-2);
+  max-width: 230px;
+}
+
+.header__user[hidden] { display: none; }
+
+.header__user > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header__logout {
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.header__logout:hover { background: var(--danger-bg); color: var(--danger-text); }
+
+/* ---------------------- Stock editable en la tabla ---------------------- */
+
+/* El numero de stock es un boton: un clic lo convierte en campo editable. */
+.stock-cell { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+
+.stock-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px dashed transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  cursor: text;
+}
+
+.stock-edit:hover {
+  border-color: var(--border-strong);
+  background: var(--surface);
+}
+
+.stock-edit .fa-pen {
+  font-size: 9px;
+  opacity: 0;
+  color: var(--text-3);
+}
+
+.stock-edit:hover .fa-pen { opacity: 1; }
+
+.stock-input {
+  width: 92px;
+  padding: 4px 8px;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border-color: var(--series-1);
+  box-shadow: 0 0 0 3px var(--series-1-soft);
+}
+
+/* Equivalencia en cajas, siempre secundaria al dato en unidades */
+.cajas-hint {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-3);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* ---------------------------- Carga rapida ------------------------------ */
+
+.carga__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1.5fr) auto;
+  gap: 13px;
+  align-items: start;
+}
+
+.carga__buscar { position: relative; }
+
+.carga__ok { align-self: stretch; display: flex; flex-direction: column; justify-content: flex-end; }
+
+.btn--lg { padding: 11px 22px; font-size: 14px; }
+
+.seg--full { width: 100%; }
+.seg--full button { flex: 1 1 0; }
+
+/* Lista de coincidencias del buscador */
+.sugerencias {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin-top: 4px;
+  max-height: 290px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+}
+
+.sugerencias[hidden] { display: none; }
+
+.sugerencia {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+
+.sugerencia:last-child { border-bottom: 0; }
+.sugerencia:hover,
+.sugerencia.is-activa { background: var(--surface-3); }
+
+.sugerencia__cod {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+  min-width: 68px;
+}
+
+.sugerencia__desc {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.sugerencia__stock {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+
+.sugerencias__vacio { padding: 14px; text-align: center; color: var(--text-2); font-size: 12.5px; }
+
+/* Ficha del producto elegido */
+.carga__sel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding: 13px 16px;
+  border: 1px solid var(--series-1);
+  background: var(--series-1-soft);
+  border-radius: var(--radius-sm);
+}
+
+.carga__sel[hidden] { display: none; }
+
+.carga__sel-info { min-width: 0; }
+.carga__sel-cod { font-weight: 700; font-variant-numeric: tabular-nums; }
+.carga__sel-desc { font-size: 12.5px; color: var(--text-2); }
+
+.carga__sel-stock { text-align: right; flex: 0 0 auto; }
+.carga__sel-label { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-2); font-weight: 650; }
+.carga__sel-stock strong { font-size: 21px; font-variant-numeric: tabular-nums; }
+.carga__sel-cajas { display: block; font-size: 11px; color: var(--text-2); }
+
+.carga__ayuda {
+  margin: 16px 0 0;
+  font-size: 12px;
+  color: var(--text-2);
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  line-height: 1.55;
+}
+
+kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.carga__log { border-top: 1px solid var(--border); }
+
+.carga__log[hidden] { display: none; }
+
+.carga__log-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+}
+
+.carga__log-head h3 { font-size: 13.5px; }
+
+.delta-pos { color: var(--ok); font-weight: 700; font-variant-numeric: tabular-nums; }
+.delta-neg { color: var(--danger-text); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+:root[data-theme="dark"] .delta-neg { color: var(--danger); }
+
+@media (max-width: 900px) {
+  .carga__grid { grid-template-columns: minmax(0, 1fr); }
+  .carga__ok .btn { width: 100%; }
+}
+
+@media (max-width: 560px) {
+  .header__user { display: none; }
+  .carga__sel { flex-direction: column; align-items: flex-start; }
+  .carga__sel-stock { text-align: left; }
+}
