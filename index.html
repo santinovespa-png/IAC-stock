@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Sistema de gestión de stock de IAC INTERNACIONAL SRL. Funciona 100% en el navegador, sin servidor.">
+  <meta name="color-scheme" content="light dark">
+  <title>IAC INTERNACIONAL SRL — Sistema de Gestión de Stock</title>
+
+  <!-- Íconos (Font Awesome) y tipografía -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        referrerpolicy="no-referrer">
+
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Aplica el tema guardado antes del primer pintado, para evitar el
+       parpadeo de claro a oscuro. Si no hay preferencia guardada, no se
+       fija nada y manda la media query de la hoja de estilos. -->
+  <script>
+    (function () {
+      try {
+        var t = window.localStorage.getItem('iac_tema');
+        if (t === 'dark' || t === 'light') {
+          document.documentElement.setAttribute('data-theme', t);
+        }
+      } catch (e) { /* almacenamiento bloqueado: se usa la preferencia del sistema */ }
+    })();
+  </script>
+
+  <!-- Favicon en línea (sin archivo externo) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231a237e'/%3E%3Ctext x='16' y='22' font-family='Arial,sans-serif' font-size='14' font-weight='bold' fill='%2342a5f5' text-anchor='middle'%3EIAC%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- =================== SIDEBAR =================== -->
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <div class="sidebar__brand">
+      <div class="sidebar__logo" aria-hidden="true">IAC</div>
+      <div class="sidebar__brand-text">
+        <div class="sidebar__name">IAC INTERNACIONAL</div>
+        <div class="sidebar__tag">Gestión de Stock</div>
+      </div>
+    </div>
+
+    <nav class="sidebar__nav">
+      <div class="sidebar__section">Principal</div>
+      <button type="button" class="nav-item is-active" data-nav="dashboard">
+        <i class="fa-solid fa-chart-pie" aria-hidden="true"></i> Dashboard
+      </button>
+      <button type="button" class="nav-item" data-nav="productos">
+        <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> Productos
+      </button>
+      <button type="button" class="nav-item" data-action="nuevo-producto">
+        <i class="fa-solid fa-circle-plus" aria-hidden="true"></i> Agregar Producto
+      </button>
+
+      <div class="sidebar__section">Herramientas</div>
+      <button type="button" class="nav-item" data-nav="exportar">
+        <i class="fa-solid fa-file-export" aria-hidden="true"></i> Exportar
+      </button>
+      <button type="button" class="nav-item" data-nav="configuracion">
+        <i class="fa-solid fa-gear" aria-hidden="true"></i> Configuración
+      </button>
+    </nav>
+
+    <div class="sidebar__footer">
+      Datos guardados en este navegador.<br>
+      <span id="storage-info">—</span>
+    </div>
+  </aside>
+
+  <div class="backdrop" id="backdrop" hidden></div>
+
+  <!-- =================== ZONA PRINCIPAL =================== -->
+  <div class="main">
+
+    <header class="header">
+      <button type="button" class="hamburger" id="btn-hamburger"
+              aria-label="Abrir menú de navegación" aria-expanded="false" aria-controls="sidebar">
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+      </button>
+
+      <div class="header__title">
+        <h1>IAC INTERNACIONAL SRL</h1>
+        <p>Sistema de Gestión de Stock</p>
+      </div>
+
+      <div class="header__actions">
+        <div class="header__rate" title="Tipo de cambio vigente (AR$ por USD)">
+          <i class="fa-solid fa-dollar-sign" aria-hidden="true"></i>
+          <span>TC</span> <strong id="header-rate">1.500</strong>
+        </div>
+        <button type="button" class="theme-toggle" id="btn-theme"
+                aria-label="Cambiar entre modo claro y oscuro" title="Modo claro / oscuro">
+          <i class="fa-solid fa-moon" id="theme-icon" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+
+    <main class="content" id="content">
+
+      <!-- ============== VISTA: DASHBOARD ============== -->
+      <section class="view" id="view-dashboard" aria-labelledby="h-dashboard">
+        <div class="view__head">
+          <div>
+            <h2 id="h-dashboard">Dashboard</h2>
+            <p>Resumen del inventario al <span id="dash-fecha">—</span></p>
+          </div>
+          <div class="seg" role="group" aria-label="Moneda destacada del valor de inventario">
+            <button type="button" data-dash-moneda="ARS" aria-pressed="true">AR$</button>
+            <button type="button" data-dash-moneda="USD" aria-pressed="false">USD</button>
+          </div>
+        </div>
+
+        <!-- Fila de KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="kpi__icon"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i></div>
+            <div>
+              <div class="kpi__label">Total de productos</div>
+              <div class="kpi__value" id="kpi-total">—</div>
+              <div class="kpi__sub" id="kpi-total-sub">—</div>
+            </div>
+          </div>
+
+          <div class="kpi kpi--alert" id="kpi-bajo-card">
+            <div class="kpi__icon"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></div>
+            <div>
+              <div class="kpi__label">Stock bajo</div>
+              <div class="kpi__value" id="kpi-bajo">—</div>
+              <div class="kpi__sub" id="kpi-bajo-sub">—</div>
+            </div>
+          </div>
+
+          <div class="kpi">
+            <div class="kpi__icon"><i class="fa-solid fa-sack-dollar" aria-hidden="true"></i></div>
+            <div>
+              <div class="kpi__label">Valor inventario AR$</div>
+              <div class="kpi__value" id="kpi-valor-ars">—</div>
+              <div class="kpi__sub" id="kpi-valor-ars-sub">—</div>
+            </div>
+          </div>
+
+          <div class="kpi">
+            <div class="kpi__icon"><i class="fa-solid fa-dollar-sign" aria-hidden="true"></i></div>
+            <div>
+              <div class="kpi__label">Valor inventario USD</div>
+              <div class="kpi__value" id="kpi-valor-usd">—</div>
+              <div class="kpi__sub" id="kpi-valor-usd-sub">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gráfico de distribución -->
+        <div class="card" style="margin-bottom:18px">
+          <div class="card__head">
+            <div>
+              <h3 id="chart-title">Distribución por familia</h3>
+              <p id="chart-subtitle">Cantidad de productos del catálogo</p>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap">
+              <div class="seg" role="group" aria-label="Agrupar el gráfico por">
+                <button type="button" data-chart-dim="familia" aria-pressed="true">Familia</button>
+                <button type="button" data-chart-dim="sistema" aria-pressed="false">Sistema / Rubro</button>
+              </div>
+              <div class="seg" role="group" aria-label="Métrica del gráfico">
+                <button type="button" data-chart-metric="productos" aria-pressed="true">Productos</button>
+                <button type="button" data-chart-metric="valor" aria-pressed="false">Valor AR$</button>
+                <button type="button" data-chart-metric="cajas" aria-pressed="false">Cajas</button>
+              </div>
+              <button type="button" class="btn btn--ghost btn--sm" id="btn-chart-table"
+                      aria-expanded="false" aria-controls="chart-table">
+                <i class="fa-solid fa-table-list" aria-hidden="true"></i> Ver tabla
+              </button>
+            </div>
+          </div>
+          <div class="card__body">
+            <div class="chart" id="chart"></div>
+            <div class="chart-table" id="chart-table" hidden></div>
+          </div>
+        </div>
+
+        <!-- Productos con stock bajo -->
+        <div class="card">
+          <div class="card__head">
+            <div>
+              <h3>Alertas de stock</h3>
+              <p>Productos cuyo stock quedó en o por debajo del mínimo</p>
+            </div>
+            <button type="button" class="btn btn--ghost btn--sm" data-action="ver-stock-bajo">
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i> Ver todos
+            </button>
+          </div>
+          <div class="table-wrap" id="dash-alertas"></div>
+        </div>
+      </section>
+
+      <!-- ============== VISTA: PRODUCTOS ============== -->
+      <section class="view" id="view-productos" hidden aria-labelledby="h-productos">
+        <div class="view__head">
+          <div>
+            <h2 id="h-productos">Productos</h2>
+            <p><span id="prod-count">—</span> en el catálogo</p>
+          </div>
+          <button type="button" class="btn" data-action="nuevo-producto">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i> Agregar producto
+          </button>
+        </div>
+
+        <div class="card">
+          <!-- Barra de filtros: una sola fila sobre la tabla -->
+          <div class="toolbar">
+            <div class="toolbar__field toolbar__search">
+              <label for="f-busqueda">Búsqueda</label>
+              <span class="search-wrap">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" id="f-busqueda" placeholder="Código, descripción o familia…"
+                       autocomplete="off">
+              </span>
+            </div>
+
+            <div class="toolbar__field">
+              <label for="f-familia">Familia</label>
+              <select id="f-familia"></select>
+            </div>
+
+            <div class="toolbar__field">
+              <label for="f-sistema">Sistema / Rubro</label>
+              <select id="f-sistema"></select>
+            </div>
+
+            <div class="toolbar__field">
+              <label for="f-stock">Stock</label>
+              <select id="f-stock">
+                <option value="todos">Todos</option>
+                <option value="bajo">Sólo stock bajo</option>
+                <option value="cero">Sin stock (0)</option>
+                <option value="ok">Con stock suficiente</option>
+              </select>
+            </div>
+
+            <div class="toolbar__field">
+              <label for="f-limpiar" class="sr-only">Limpiar filtros</label>
+              <button type="button" class="btn btn--ghost" id="f-limpiar">
+                <i class="fa-solid fa-eraser" aria-hidden="true"></i> Limpiar
+              </button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data" id="tabla-productos">
+              <caption class="sr-only">
+                Listado de productos con precios, stock y acciones. Las columnas con
+                encabezado interactivo permiten ordenar el listado.
+              </caption>
+              <thead>
+                <tr>
+                  <th class="sortable" data-sort="familia" aria-sort="none" scope="col">Familia</th>
+                  <th class="sortable" data-sort="codigo" aria-sort="none" scope="col">Código</th>
+                  <th class="sortable" data-sort="descripcion" aria-sort="none" scope="col">Descripción</th>
+                  <th class="sortable" data-sort="sistema" aria-sort="none" scope="col">Sistema</th>
+                  <th class="sortable num" data-sort="stock" aria-sort="none" scope="col">Stock</th>
+                  <th class="sortable num" data-sort="stock_minimo" aria-sort="none" scope="col">Mín.</th>
+                  <th class="sortable num" data-sort="presentacion_caja" aria-sort="none" scope="col">Pres.</th>
+                  <th class="sortable num" data-sort="precio_usd" aria-sort="none" scope="col">USD / caja</th>
+                  <th class="sortable num" data-sort="precio_ars_caja" aria-sort="none" scope="col">AR$ / caja</th>
+                  <th class="sortable num" data-sort="precio_ars_unidad" aria-sort="none" scope="col">AR$ / unidad</th>
+                  <th class="sortable" data-sort="ultimo_movimiento" aria-sort="none" scope="col">Últ. mov.</th>
+                  <th scope="col" style="text-align:right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-productos"></tbody>
+            </table>
+          </div>
+
+          <div id="productos-vacio" hidden></div>
+
+          <div class="pager">
+            <div class="pager__info" id="pager-info">—</div>
+            <div class="pager__nav" id="pager-nav" role="group" aria-label="Paginación"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============== VISTA: EXPORTAR ============== -->
+      <section class="view" id="view-exportar" hidden aria-labelledby="h-exportar">
+        <div class="view__head">
+          <div>
+            <h2 id="h-exportar">Exportar e importar</h2>
+            <p>Generá archivos para Tango Gestión, Excel, o hacé un backup completo</p>
+          </div>
+        </div>
+
+        <div class="export-grid">
+          <div class="export-card">
+            <div class="export-card__icon"><i class="fa-solid fa-file-csv" aria-hidden="true"></i></div>
+            <h3>Exportar para Tango Gestión</h3>
+            <p>CSV con el precio de venta por unidad en AR$, listo para importar al maestro de artículos.</p>
+            <code>COD_ARTICU · DESCRIPCIO · PRECIO_VTA · UNIDAD_MEDIDA · RUBRO</code>
+            <button type="button" class="btn" data-action="export-tango">
+              <i class="fa-solid fa-download" aria-hidden="true"></i> Descargar CSV
+            </button>
+          </div>
+
+          <div class="export-card">
+            <div class="export-card__icon"><i class="fa-solid fa-file-excel" aria-hidden="true"></i></div>
+            <h3>Exportar Excel</h3>
+            <p>Planilla <strong>.xlsx</strong> con todos los productos, precios en USD y AR$, stock y valorización.</p>
+            <code>IAC_stock_AAAA-MM-DD.xlsx</code>
+            <button type="button" class="btn" data-action="export-excel">
+              <i class="fa-solid fa-download" aria-hidden="true"></i> Descargar Excel
+            </button>
+          </div>
+
+          <div class="export-card">
+            <div class="export-card__icon"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i></div>
+            <h3>Exportar JSON (backup)</h3>
+            <p>Backup completo: productos, stock, configuración y tipo de cambio. Guardalo en un lugar seguro.</p>
+            <code>IAC_backup_AAAA-MM-DD.json</code>
+            <button type="button" class="btn" data-action="export-json">
+              <i class="fa-solid fa-download" aria-hidden="true"></i> Descargar JSON
+            </button>
+          </div>
+
+          <div class="export-card">
+            <div class="export-card__icon"><i class="fa-solid fa-file-import" aria-hidden="true"></i></div>
+            <h3>Importar JSON</h3>
+            <p>Restaurá un backup previo. Se te va a pedir confirmación antes de reemplazar los datos actuales.</p>
+            <code>Reemplaza todo el catálogo actual</code>
+            <button type="button" class="btn btn--ghost" data-action="import-json">
+              <i class="fa-solid fa-upload" aria-hidden="true"></i> Seleccionar archivo…
+            </button>
+            <input type="file" id="input-import" accept=".json,application/json" class="sr-only"
+                   aria-label="Archivo de backup JSON">
+          </div>
+        </div>
+      </section>
+
+      <!-- ============== VISTA: CONFIGURACIÓN ============== -->
+      <section class="view" id="view-configuracion" hidden aria-labelledby="h-config">
+        <div class="view__head">
+          <div>
+            <h2 id="h-config">Configuración</h2>
+            <p>Parámetros generales del sistema</p>
+          </div>
+        </div>
+
+        <div class="card" style="max-width:760px; margin-bottom:18px">
+          <div class="card__head">
+            <div>
+              <h3>Tipo de cambio y valores por defecto</h3>
+              <p>Al guardar un tipo de cambio nuevo, todos los precios en AR$ se recalculan.</p>
+            </div>
+          </div>
+          <div class="card__body">
+            <form id="form-config" novalidate>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="cfg-tc">Tipo de cambio (AR$ por USD) <span class="req">*</span></label>
+                  <input type="number" id="cfg-tc" min="0.01" step="0.01" inputmode="decimal" required>
+                  <span class="field__hint">Valor por defecto: 1500</span>
+                  <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
+                </div>
+
+                <div class="field">
+                  <label for="cfg-stock-min">Stock mínimo por defecto <span class="req">*</span></label>
+                  <input type="number" id="cfg-stock-min" min="0" step="1" inputmode="numeric" required>
+                  <span class="field__hint">Se aplica a los productos nuevos. Valor por defecto: 5</span>
+                  <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
+                </div>
+
+                <div class="field">
+                  <label for="cfg-unidad">Unidad de medida (Tango) <span class="req">*</span></label>
+                  <input type="text" id="cfg-unidad" maxlength="20" required>
+                  <span class="field__hint">Se exporta en la columna UNIDAD_MEDIDA</span>
+                  <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
+                </div>
+
+                <div class="field">
+                  <label for="cfg-delim">Separador del CSV</label>
+                  <select id="cfg-delim">
+                    <option value=";">Punto y coma ( ; ) — recomendado para Excel en español</option>
+                    <option value=",">Coma ( , )</option>
+                    <option value="&#9;">Tabulación</option>
+                  </select>
+                  <span class="field__hint">Los decimales siempre se exportan con punto.</span>
+                </div>
+              </div>
+
+              <div class="modal__foot" style="background:transparent; border:0; padding:18px 0 0">
+                <button type="button" class="btn btn--ghost" id="btn-config-reset-form">
+                  <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Restaurar valores por defecto
+                </button>
+                <button type="submit" class="btn">
+                  <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Guardar cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="card" style="max-width:760px">
+          <div class="card__head">
+            <div>
+              <h3>Datos almacenados</h3>
+              <p>Todo se guarda en el almacenamiento local de este navegador. No hay servidor.</p>
+            </div>
+          </div>
+          <div class="card__body">
+            <div class="callout callout--info" style="margin-bottom:16px">
+              <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+              <div id="cfg-storage-detalle">—</div>
+            </div>
+            <div class="callout callout--warning" style="margin-bottom:16px">
+              <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+              <div>
+                Si borrás los datos de navegación o usás otra computadora, el catálogo no viaja con vos.
+                Descargá un <strong>backup JSON</strong> con regularidad desde la sección Exportar.
+              </div>
+            </div>
+            <div style="display:flex; gap:9px; flex-wrap:wrap">
+              <button type="button" class="btn btn--ghost" data-action="export-json">
+                <i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Descargar backup ahora
+              </button>
+              <button type="button" class="btn btn--danger" data-action="reset-datos">
+                <i class="fa-solid fa-trash-can" aria-hidden="true"></i> Restablecer catálogo inicial
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- =================== MODAL: ALTA / MODIFICACIÓN =================== -->
+<dialog class="modal" id="modal-producto" aria-labelledby="modal-producto-title">
+  <form class="modal__form" id="form-producto" novalidate>
+    <div class="modal__head">
+      <div style="flex:1 1 auto; min-width:0">
+        <h3 id="modal-producto-title">Agregar producto</h3>
+        <p id="modal-producto-sub">Completá los datos del artículo</p>
+      </div>
+      <button type="button" class="modal__close" data-close aria-label="Cerrar">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="modal__body">
+      <div class="form-grid">
+        <div class="field">
+          <label for="p-familia">Familia <span class="req">*</span></label>
+          <select id="p-familia" required></select>
+          <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
+        </div>
+
+        <div class="field">
+          <label for="p-codigo">Código de artículo <span class="req">*</span></label>
+          <input type="text" id="p-codigo" maxlength="30" required autocomplete="off" inputmode="text">
+          <span class="field__hint">Único en el catálogo</span>
+          <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
+        </div>
+
+        <div class="field field--full">
+          <label for="p-descripcion">Descripción <span class="req">*</span></label>
+          <input type="text" id="p-descripcion" maxlength="160" required autocomplete="off">
+          <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
+        </div>
+
+        <div class="field">
+          <label for="p-sistema">Sistema / Rubro <span class="req">*</span></label>
+          <select id="p-sistema" required></select>
+          <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
+        </div>
+
+        <div class="field">
+          <label for="p-presentacion">Presentación (unidades por caja) <span class="req">*</span></label>
+          <input type="number" id="p-presentacion" min="1" step="1" required inputmode="numeric">
+          <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
+        </div>
+
+        <div class="field">
+          <label for="p-precio-usd">Precio USD (por caja) <span class="req">*</span></label>
+          <input type="number" id="p-precio-usd" min="0" step="0.01" required inputmode="decimal">
+          <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
+        </div>
+
+        <div class="field field--calc">
+          <label for="p-precio-ars-caja">Precio AR$ por caja</label>
+          <input type="text" id="p-precio-ars-caja" readonly tabindex="-1" aria-readonly="true">
+          <span class="field__hint">Calculado: USD × tipo de cambio (<span class="tc-actual">—</span>)</span>
+        </div>
+
+        <div class="field field--calc">
+          <label for="p-precio-ars-unidad">Precio AR$ por unidad</label>
+          <input type="text" id="p-precio-ars-unidad" readonly tabindex="-1" aria-readonly="true">
+          <span class="field__hint">Calculado: precio por caja ÷ presentación</span>
+        </div>
+
+        <div class="field">
+          <label for="p-stock">Stock actual (cajas) <span class="req">*</span></label>
+          <input type="number" id="p-stock" min="0" step="1" required inputmode="numeric">
+          <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
+        </div>
+
+        <div class="field">
+          <label for="p-stock-minimo">Stock mínimo <span class="req">*</span></label>
+          <input type="number" id="p-stock-minimo" min="0" step="1" required inputmode="numeric">
+          <span class="field__hint">Dispara la alerta cuando el stock llega a este valor</span>
+          <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
+        </div>
+
+        <div class="field field--full">
+          <label for="p-observaciones">Observaciones</label>
+          <textarea id="p-observaciones" maxlength="500" placeholder="Opcional"></textarea>
+          <span class="field__hint"><span id="p-obs-count">0</span>/500</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal__foot">
+      <button type="button" class="btn btn--ghost" data-close>Cancelar</button>
+      <button type="submit" class="btn" id="btn-guardar-producto">
+        <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Guardar
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<!-- =================== MODAL: AJUSTE DE STOCK =================== -->
+<dialog class="modal modal--sm" id="modal-stock" aria-labelledby="modal-stock-title">
+  <form class="modal__form" id="form-stock" novalidate>
+    <div class="modal__head">
+      <div style="flex:1 1 auto; min-width:0">
+        <h3 id="modal-stock-title">Ajustar stock</h3>
+        <p>Sumá o restá cajas y queda registrada la fecha del movimiento</p>
+      </div>
+      <button type="button" class="modal__close" data-close aria-label="Cerrar">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="modal__body">
+      <div class="prod-summary">
+        <div style="min-width:0">
+          <div class="prod-summary__code" id="stock-codigo">—</div>
+          <div class="prod-summary__desc" id="stock-descripcion">—</div>
+        </div>
+      </div>
+
+      <div class="form-grid" style="grid-template-columns:minmax(0,1fr)">
+        <div class="field">
+          <label for="stock-cantidad">Cantidad de cajas a mover</label>
+          <div class="stepper">
+            <button type="button" id="stock-menos" aria-label="Restar una caja">
+              <i class="fa-solid fa-minus" aria-hidden="true"></i>
+            </button>
+            <input type="number" id="stock-cantidad" step="1" value="1" inputmode="numeric">
+            <button type="button" id="stock-mas" aria-label="Sumar una caja">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="quick-chips" role="group" aria-label="Cantidades rápidas">
+            <button type="button" data-qty="1">1</button>
+            <button type="button" data-qty="5">5</button>
+            <button type="button" data-qty="10">10</button>
+            <button type="button" data-qty="25">25</button>
+            <button type="button" data-qty="50">50</button>
+          </div>
+          <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
+        </div>
+
+        <div class="field">
+          <label for="stock-motivo">Motivo (opcional)</label>
+          <input type="text" id="stock-motivo" maxlength="80" autocomplete="off"
+                 placeholder="Ingreso de mercadería, venta, ajuste de inventario…">
+        </div>
+      </div>
+
+      <div class="callout callout--info" style="margin-top:14px">
+        <i class="fa-solid fa-calculator" aria-hidden="true"></i>
+        <div>
+          Stock actual <strong id="stock-actual">—</strong> cajas ·
+          queda en <strong id="stock-resultado">—</strong> cajas
+          <span id="stock-aviso"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal__foot">
+      <button type="button" class="btn btn--ghost" data-close>Cancelar</button>
+      <button type="button" class="btn btn--danger" id="btn-stock-restar">
+        <i class="fa-solid fa-minus" aria-hidden="true"></i> Restar
+      </button>
+      <button type="submit" class="btn" id="btn-stock-sumar">
+        <i class="fa-solid fa-plus" aria-hidden="true"></i> Sumar
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<!-- =================== MODAL: CONFIRMACIÓN GENÉRICA =================== -->
+<dialog class="modal modal--sm" id="modal-confirm" aria-labelledby="confirm-title">
+  <div class="modal__form">
+    <div class="modal__head">
+      <div style="flex:1 1 auto; min-width:0">
+        <h3 id="confirm-title">Confirmar</h3>
+      </div>
+      <button type="button" class="modal__close" data-close aria-label="Cerrar">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="modal__body" id="confirm-body"></div>
+    <div class="modal__foot">
+      <button type="button" class="btn btn--ghost" data-close id="confirm-cancel">Cancelar</button>
+      <button type="button" class="btn btn--danger" id="confirm-ok">Confirmar</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Contenedor de notificaciones -->
+<div class="toasts" id="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
+
+<!-- Tooltip del gráfico -->
+<div class="chart-tip" id="chart-tip" role="tooltip" aria-hidden="true"></div>
+
+<!-- SheetJS: sólo se usa para la exportación a .xlsx -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
+        referrerpolicy="no-referrer" defer></script>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
