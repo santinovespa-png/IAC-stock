@@ -48,6 +48,10 @@ gratis y lleva unos diez minutos, **una sola vez**.
    - **Region**: `South America (São Paulo)`, que es la más cercana.
 4. **Create new project** y esperá un par de minutos a que termine de armarse.
 
+> **Si ya tenías la base creada de antes**, volvé a ejecutar `supabase/schema.sql`
+> igual: el archivo es seguro de correr las veces que haga falta y agrega lo que
+> falte (por ejemplo, la columna de lote) sin tocar los datos cargados.
+
 ### Paso 2 — Crear las tablas
 
 > Si el navegador te traduce la página automáticamente, desactivalo para esta
@@ -132,6 +136,36 @@ En *Carga rápida* hay tres acciones:
 
 ---
 
+## 3b. Número de lote
+
+Cada producto tiene un campo de **lote**, que se carga a mano en tres lugares:
+
+- **Tabla de productos**: el recuadro de la columna *Lote*. Un clic y se escribe;
+  `Enter` guarda, `Escape` cancela. Si está punteado y con un guion, es que el
+  producto todavía no tiene lote cargado.
+- **Carga rápida**: el campo *3 · Lote*, que viene precargado con el lote que el
+  producto ya tenga. Se guarda junto con las unidades, en la misma operación.
+- **Alta y modificación**: el campo *Número de lote* del formulario.
+
+El lote entra en la búsqueda global, sale en el **CSV de Tango** como última
+columna, aparece en el Excel y queda registrado en cada movimiento de stock del
+historial.
+
+> **Si cambiás sólo el lote no se genera un movimiento de stock**, porque no se
+> movió ninguna cantidad. Queda asentado en el producto con la fecha y el
+> usuario que lo modificó.
+
+**El nombre de la columna en el CSV es configurable.** Por defecto se exporta
+como `NRO_LOTE`, pero si tu Tango espera otro encabezado (`PARTIDA`,
+`NRO_PARTIDA`…) lo cambiás en *Configuración* sin tocar código.
+
+> **Limitación a tener en cuenta:** es **un lote por producto**. Si un mismo
+> artículo tiene stock de dos lotes distintos al mismo tiempo, este campo guarda
+> uno solo. Llevar varios lotes por artículo, cada uno con su cantidad, requiere
+> partir el stock por lote y es un cambio bastante mayor.
+
+---
+
 ## 4. Estructura del proyecto
 
 ```
@@ -177,6 +211,7 @@ Alta, modificación y baja con validación campo por campo:
 | Precio AR$ por unidad | **Calculado**: `precio por caja ÷ presentación` |
 | Stock actual | Entero ≥ 0, **en unidades** |
 | Stock mínimo | Entero ≥ 0, **en unidades** |
+| Número de lote | Opcional, hasta 40 caracteres |
 | Observaciones | Opcional, hasta 500 caracteres |
 
 La baja **siempre pide confirmación** y avisa si el producto tiene stock cargado.
@@ -189,7 +224,7 @@ por familia, rubro y estado de stock, ordenamiento por cualquier columna
 
 | Export | Archivo | Contenido |
 |---|---|---|
-| Tango Gestión | `IAC_tango_AAAA-MM-DD.csv` | `COD_ARTICU`, `DESCRIPCIO`, `PRECIO_VTA` (AR$ por unidad), `UNIDAD_MEDIDA`, `RUBRO` |
+| Tango Gestión | `IAC_tango_AAAA-MM-DD.csv` | `COD_ARTICU`, `DESCRIPCIO`, `PRECIO_VTA` (AR$ por unidad), `UNIDAD_MEDIDA`, `RUBRO`, `NRO_LOTE` |
 | Excel | `IAC_stock_AAAA-MM-DD.xlsx` | Hoja *Productos* (stock en unidades, equivalencia en cajas, valorización) + hoja *Resumen* |
 | Backup JSON | `IAC_backup_AAAA-MM-DD.json` | Productos y configuración completos |
 | Importar JSON | — | Restaura un backup, con confirmación previa |

@@ -73,6 +73,7 @@
       tipoCambio: TIPO_CAMBIO_DEFAULT,
       stockMinimoDefault: STOCK_MINIMO_DEFAULT,
       unidadMedida: 'UNIDAD',
+      csvColumnaLote: 'NRO_LOTE',
       csvDelimitador: ';'
     };
   }
@@ -125,6 +126,7 @@
       precio_usd: numeroNoNegativo(raw.precio_usd, 0),
       stock: enteroPositivo(raw.stock, 0, 0),
       stock_minimo: enteroPositivo(raw.stock_minimo, 0, STOCK_MINIMO_DEFAULT),
+      lote: String(raw.lote == null ? '' : raw.lote).trim().slice(0, 40),
       observaciones: String(raw.observaciones == null ? '' : raw.observaciones).slice(0, 500),
       ultimo_movimiento: raw.ultimo_movimiento ? String(raw.ultimo_movimiento) : null,
       ultimo_movimiento_detalle: raw.ultimo_movimiento_detalle
@@ -147,6 +149,8 @@
       stockMinimoDefault: enteroPositivo(raw.stockMinimoDefault, 0, def.stockMinimoDefault),
       unidadMedida: (String(raw.unidadMedida == null ? '' : raw.unidadMedida).trim()
         || def.unidadMedida).slice(0, 20),
+      csvColumnaLote: (String(raw.csvColumnaLote == null ? '' : raw.csvColumnaLote).trim()
+        || def.csvColumnaLote).slice(0, 30),
       csvDelimitador: [';', ',', '\t'].indexOf(delim) !== -1 ? delim : def.csvDelimitador
     };
   }
@@ -163,6 +167,7 @@
         precio_usd: p.precio_usd,
         stock: 0,
         stock_minimo: STOCK_MINIMO_DEFAULT,
+        lote: '',
         observaciones: ''
       });
     }).filter(Boolean);
@@ -1115,7 +1120,8 @@
       if (!terminos.length) return true;
 
       const heno = normalizarTexto([
-        p.codigo, p.descripcion, p.familia, FAMILIA_NOMBRE[p.familia] || '', p.sistema
+        p.codigo, p.descripcion, p.familia, FAMILIA_NOMBRE[p.familia] || '',
+        p.sistema, p.lote
       ].join(' '));
 
       return terminos.every(function (t) { return heno.indexOf(t) !== -1; });
@@ -1215,6 +1221,16 @@
           ) + '">' + esc(fmtFecha(p.ultimo_movimiento)) + '</span>'
       : '<span style="color:var(--text-3)">—</span>';
 
+    // Recuadro de lote: vacío muestra un guion tenue, clic para editar.
+    const loteCell =
+      '<button type="button" class="lote-box' + (p.lote ? '' : ' is-vacio') + '" ' +
+        'data-action="editar-lote" data-id="' + esc(p.id) + '" ' +
+        'title="' + (p.lote ? 'Lote ' + esc(p.lote) + ' — clic para cambiarlo'
+                            : 'Sin lote — clic para cargarlo') + '">' +
+        (p.lote ? esc(p.lote) : '<span aria-hidden="true">—</span>' +
+          '<span class="sr-only">Sin lote cargado</span>') +
+      '</button>';
+
     // El stock es un botón que se convierte en campo al hacerle clic.
     const stockCell =
       '<div class="stock-cell">' +
@@ -1234,6 +1250,7 @@
         esc(p.descripcion) + '</span></td>' +
       '<td><span class="chip">' + esc(p.sistema) + '</span></td>' +
       '<td class="num cell-stock">' + stockCell + '</td>' +
+      '<td class="cell-lote">' + loteCell + '</td>' +
       '<td class="num">' + fmtEntero(p.stock_minimo) + '</td>' +
       '<td class="num">' + fmtEntero(p.presentacion_caja) + '</td>' +
       '<td class="num">' + fmtDecimal(p.precio_usd) + '</td>' +
@@ -1410,6 +1427,7 @@
       $('#p-presentacion').value = String(p.presentacion_caja);
       $('#p-precio-usd').value = String(p.precio_usd);
       $('#p-stock').value = String(p.stock);
+      $('#p-lote').value = p.lote;
       $('#p-stock-minimo').value = String(p.stock_minimo);
       $('#p-observaciones').value = p.observaciones;
     } else {
@@ -1420,6 +1438,7 @@
       $('#p-sistema').value = SISTEMAS[0];
       $('#p-presentacion').value = '1';
       $('#p-stock').value = '0';
+      $('#p-lote').value = '';
       $('#p-stock-minimo').value = String(state.config.stockMinimoDefault);
     }
 
@@ -1494,6 +1513,9 @@
       fallar('p-stock-minimo', 'Debe ser un entero de 0 o más.');
     } else stockMinimo = minLeido.valor;
 
+    const lote = $('#p-lote').value.trim();
+    if (lote.length > 40) fallar('p-lote', 'Máximo 40 caracteres.');
+
     const observaciones = $('#p-observaciones').value.trim();
     if (observaciones.length > 500) fallar('p-observaciones', 'Máximo 500 caracteres.');
 
@@ -1504,7 +1526,8 @@
       datos: {
         familia: familia, codigo: codigo, descripcion: descripcion, sistema: sistema,
         presentacion_caja: pres, precio_usd: precioUsd,
-        stock: stock, stock_minimo: stockMinimo, observaciones: observaciones
+        stock: stock, stock_minimo: stockMinimo, lote: lote,
+        observaciones: observaciones
       }
     };
   }
@@ -1643,9 +1666,10 @@
    * @param {string} id        producto
    * @param {number} nuevoStock  total en unidades que debe quedar
    * @param {string} motivo
-   * @returns {{anterior:number, nuevo:number, delta:number}}
+   * @param {string} [lote]      si viene, también actualiza el número de lote
+   * @returns {{anterior:number, nuevo:number, delta:number, loteCambio:boolean}}
    */
-  async function aplicarStock(id, nuevoStock, motivo) {
+  async function aplicarStock(id, nuevoStock, motivo, lote) {
     const i = state.productos.findIndex(function (x) { return x.id === id; });
     if (i === -1) throw new Error('El producto ya no existe.');
 
@@ -1653,26 +1677,73 @@
     const anterior = p.stock;
     const delta = nuevoStock - anterior;
 
-    if (delta === 0) return { anterior: anterior, nuevo: nuevoStock, delta: 0 };
+    const loteNuevo = lote === undefined
+      ? p.lote
+      : String(lote == null ? '' : lote).trim().slice(0, 40);
+    const loteCambio = loteNuevo !== p.lote;
+
+    // Sin cambios de ninguna clase: no vale la pena escribir.
+    if (delta === 0 && !loteCambio) {
+      return { anterior: anterior, nuevo: nuevoStock, delta: 0, loteCambio: false };
+    }
 
     const ahora = new Date().toISOString();
     let actualizado = Object.assign({}, p, {
       stock: nuevoStock,
-      actualizado: ahora,
-      ultimo_movimiento: ahora,
-      ultimo_movimiento_detalle:
-        (delta > 0 ? '+' : '−') + Math.abs(delta) + ' u' + (motivo ? ' · ' + motivo : '')
+      lote: loteNuevo,
+      actualizado: ahora
     });
+
+    // El sello de movimiento sólo se toca si realmente se movió stock.
+    if (delta !== 0) {
+      actualizado.ultimo_movimiento = ahora;
+      actualizado.ultimo_movimiento_detalle =
+        (delta > 0 ? '+' : '−') + Math.abs(delta) + ' u' +
+        (loteNuevo ? ' · lote ' + loteNuevo : '') +
+        (motivo ? ' · ' + motivo : '');
+    }
 
     if (Datos.modo() === 'nube') {
       actualizado = normalizarProducto(await Datos.guardarProducto(actualizado));
-      Datos.registrarMovimiento(actualizado, delta, motivo);
+      if (delta !== 0) Datos.registrarMovimiento(actualizado, delta, motivo);
     }
 
     state.productos[i] = actualizado;
     Datos.escribirCache(state);
 
-    return { anterior: anterior, nuevo: nuevoStock, delta: delta, producto: actualizado };
+    return {
+      anterior: anterior, nuevo: nuevoStock, delta: delta,
+      loteCambio: loteCambio, producto: actualizado
+    };
+  }
+
+  /**
+   * Guarda el número de lote de un producto. No genera un movimiento de stock
+   * porque no cambia ninguna cantidad: queda asentado en el producto, con el
+   * usuario y la fecha de modificación.
+   */
+  async function guardarLote(id, lote) {
+    const i = state.productos.findIndex(function (x) { return x.id === id; });
+    if (i === -1) throw new Error('El producto ya no existe.');
+
+    const p = state.productos[i];
+    const limpio = String(lote == null ? '' : lote).trim().slice(0, 40);
+
+    if (limpio === p.lote) return { sinCambios: true, lote: limpio };
+
+    let actualizado = Object.assign({}, p, {
+      lote: limpio,
+      actualizado: new Date().toISOString()
+    });
+
+    if (Datos.modo() === 'nube') {
+      actualizado = normalizarProducto(await Datos.guardarProducto(actualizado));
+    }
+
+    state.productos[i] = actualizado;
+    Datos.escribirCache(state);
+
+    return { sinCambios: false, anterior: p.lote, lote: limpio };
   }
 
   /* ------------------- Edición en línea en la tabla ---------------------- */
@@ -1724,6 +1795,62 @@
           (r.nuevo <= p.stock_minimo ? ' (en alerta de stock bajo)' : ''));
       } catch (e) {
         toast('error', 'No se pudo guardar el stock', e.message);
+      } finally {
+        ui.ocupado = false;
+        renderTodo();
+      }
+    };
+
+    input.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); terminar(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); terminar(false); }
+    });
+
+    input.addEventListener('blur', function () { terminar(true); });
+  }
+
+  /** Convierte el recuadro de lote en un campo de texto editable. */
+  function editarLoteEnLinea(btn, id) {
+    const p = state.productos.find(function (x) { return x.id === id; });
+    if (!p || ui.editandoStockId) return;
+
+    // Se reutiliza el mismo cerrojo que el stock: una sola edición a la vez.
+    ui.editandoStockId = id;
+    const celda = btn.parentNode;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'lote-input';
+    input.maxLength = 40;
+    input.value = p.lote;
+    input.placeholder = 'Nº de lote';
+    input.setAttribute('aria-label', 'Número de lote de ' + p.codigo);
+
+    celda.innerHTML = '';
+    celda.appendChild(input);
+    input.focus();
+    input.select();
+
+    let cerrado = false;
+
+    const terminar = async function (guardar) {
+      if (cerrado) return;
+      cerrado = true;
+
+      const valor = input.value;
+      ui.editandoStockId = null;
+
+      if (!guardar) { renderProductos(); return; }
+
+      try {
+        ui.ocupado = true;
+        const r = await guardarLote(id, valor);
+        if (!r.sinCambios) {
+          toast('success', 'Lote actualizado',
+            p.codigo + ': ' + (r.lote || '(sin lote)'));
+        }
+      } catch (e) {
+        toast('error', 'No se pudo guardar el lote', e.message);
       } finally {
         ui.ocupado = false;
         renderTodo();
@@ -1949,6 +2076,9 @@
 
     refrescarSeleccionCarga();
 
+    // Se precarga el lote que ya tenga, para no tener que retipearlo.
+    $('#carga-lote').value = p.lote;
+
     const cant = $('#carga-cantidad');
     cant.value = ui.cargaModo === 'fijar' ? String(p.stock) : '';
     cant.focus();
@@ -1969,6 +2099,8 @@
     $('#carga-sel-cajas').textContent = eq
       ? '≈ ' + eq + ' · mínimo ' + fmtEntero(p.stock_minimo) + ' u'
       : 'Mínimo ' + fmtEntero(p.stock_minimo) + ' u';
+
+    $('#carga-sel-lote').textContent = p.lote ? 'Lote ' + p.lote : 'Sin lote cargado';
 
     cont.hidden = false;
   }
@@ -2038,10 +2170,12 @@
       motivo = 'Carga rápida (salida)';
     }
 
-    await conBoton($('#btn-carga-aplicar'), async function () {
-      const r = await aplicarStock(p.id, nuevoStock, motivo);
+    const lote = $('#carga-lote').value;
 
-      if (r.delta === 0) {
+    await conBoton($('#btn-carga-aplicar'), async function () {
+      const r = await aplicarStock(p.id, nuevoStock, motivo, lote);
+
+      if (r.delta === 0 && !r.loteCambio) {
         toast('info', 'Sin cambios', p.codigo + ' ya estaba en ' + nuevoStock + ' unidades.');
       } else {
         ui.cargaLog.unshift({
@@ -2050,10 +2184,15 @@
           anterior: r.anterior,
           nuevo: r.nuevo,
           delta: r.delta,
+          lote: r.producto ? r.producto.lote : lote,
           hora: new Date().toISOString()
         });
         if (ui.cargaLog.length > 50) ui.cargaLog.pop();
         renderCargaLog();
+
+        if (r.delta === 0 && r.loteCambio) {
+          toast('success', 'Lote actualizado', p.codigo + ': ' + (lote || '(sin lote)'));
+        }
       }
 
       limpiarCarga();
@@ -2066,6 +2205,7 @@
     ui.cargaProductoId = null;
     $('#carga-codigo').value = '';
     $('#carga-cantidad').value = '';
+    $('#carga-lote').value = '';
     $('#carga-seleccion').hidden = true;
     $('#carga-sugerencias').hidden = true;
     setError('carga-codigo', null);
@@ -2084,7 +2224,8 @@
         '<caption class="sr-only">Productos cargados en esta sesión</caption>' +
         '<thead><tr>' +
           '<th scope="col">Hora</th><th scope="col">Código</th>' +
-          '<th scope="col">Descripción</th><th scope="col" class="num">Antes</th>' +
+          '<th scope="col">Descripción</th><th scope="col">Lote</th>' +
+          '<th scope="col" class="num">Antes</th>' +
           '<th scope="col" class="num">Movimiento</th><th scope="col" class="num">Ahora</th>' +
         '</tr></thead><tbody>' +
         ui.cargaLog.map(function (m) {
@@ -2095,6 +2236,7 @@
             '<td class="cell-code">' + esc(m.codigo) + '</td>' +
             '<td class="cell-desc"><span class="cell-desc__text" title="' + esc(m.descripcion) + '">' +
               esc(m.descripcion) + '</span></td>' +
+            '<td>' + (m.lote ? esc(m.lote) : '<span style="color:var(--text-3)">—</span>') + '</td>' +
             '<td class="num">' + fmtEntero(m.anterior) + '</td>' +
             '<td class="num"><span class="' + (pos ? 'delta-pos' : 'delta-neg') + '">' +
               (pos ? '+' : '−') + fmtEntero(Math.abs(m.delta)) + '</span></td>' +
@@ -2125,7 +2267,11 @@
     }
 
     const delim = state.config.csvDelimitador;
-    const lineas = [['COD_ARTICU', 'DESCRIPCIO', 'PRECIO_VTA', 'UNIDAD_MEDIDA', 'RUBRO'].join(delim)];
+
+    const lineas = [[
+      'COD_ARTICU', 'DESCRIPCIO', 'PRECIO_VTA', 'UNIDAD_MEDIDA', 'RUBRO',
+      state.config.csvColumnaLote
+    ].join(delim)];
 
     state.productos.forEach(function (p) {
       lineas.push([
@@ -2133,7 +2279,8 @@
         campoCSV(p.descripcion, delim),
         campoCSV(precioArsUnidad(p).toFixed(2), delim),
         campoCSV(state.config.unidadMedida, delim),
-        campoCSV(p.sistema, delim)
+        campoCSV(p.sistema, delim),
+        campoCSV(p.lote, delim)
       ].join(delim));
     });
 
@@ -2141,8 +2288,16 @@
     descargar(new Blob([contenido], { type: 'text/csv;charset=utf-8;' }),
       'IAC_tango_' + sufijoFecha() + '.csv');
 
-    toast('success', 'CSV generado',
-      state.productos.length + ' artículos exportados para Tango Gestión.');
+    const sinLote = state.productos.filter(function (p) { return !p.lote; }).length;
+
+    if (sinLote) {
+      toast('warning', 'CSV generado con lotes incompletos',
+        state.productos.length + ' artículos exportados, pero ' + sinLote +
+        ' van con el lote vacío.');
+    } else {
+      toast('success', 'CSV generado',
+        state.productos.length + ' artículos exportados para Tango Gestión.');
+    }
   }
 
   function exportarJSON() {
@@ -2315,6 +2470,7 @@
         'Precio AR$ caja': precioArsCaja(p),
         'Precio AR$ unidad': precioArsUnidad(p),
         'Stock (unidades)': p.stock,
+        'Lote': p.lote,
         'Equivale a': equivalenciaCajas(p) || '—',
         'Stock mínimo (u)': p.stock_minimo,
         'Estado': p.stock === 0 ? 'SIN STOCK' : (esStockBajo(p) ? 'STOCK BAJO' : 'OK'),
@@ -2330,8 +2486,9 @@
     const hoja = XLSX.utils.json_to_sheet(filas);
     hoja['!cols'] = [
       { wch: 8 }, { wch: 24 }, { wch: 12 }, { wch: 52 }, { wch: 18 }, { wch: 14 },
-      { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 15 }, { wch: 18 }, { wch: 15 },
-      { wch: 12 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 30 }, { wch: 24 }, { wch: 36 }
+      { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 15 }, { wch: 16 }, { wch: 18 },
+      { wch: 15 }, { wch: 12 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 30 },
+      { wch: 24 }, { wch: 36 }
     ];
     hoja['!autofilter'] = { ref: hoja['!ref'] };
 
@@ -2347,6 +2504,8 @@
       { Concepto: 'Unidades en stock', Valor: t.unidades },
       { Concepto: 'Productos con stock bajo', Valor: t.bajo },
       { Concepto: 'Productos sin stock', Valor: t.cero },
+      { Concepto: 'Productos sin lote cargado',
+        Valor: state.productos.filter(function (p) { return !p.lote; }).length },
       { Concepto: 'Valor inventario AR$', Valor: t.valorArs },
       { Concepto: 'Valor inventario USD', Valor: t.valorUsd },
       { Concepto: '', Valor: '' },
@@ -2390,6 +2549,7 @@
     $('#cfg-tc').value = String(state.config.tipoCambio);
     $('#cfg-stock-min').value = String(state.config.stockMinimoDefault);
     $('#cfg-unidad').value = state.config.unidadMedida;
+    $('#cfg-col-lote').value = state.config.csvColumnaLote;
     $('#cfg-delim').value = state.config.csvDelimitador;
   }
 
@@ -2423,6 +2583,13 @@
     const unidad = $('#cfg-unidad').value.trim();
     if (!unidad) fallar('cfg-unidad', 'La unidad de medida es obligatoria.');
 
+    const colLote = $('#cfg-col-lote').value.trim();
+    if (!colLote) {
+      fallar('cfg-col-lote', 'Poné el nombre de la columna de lote.');
+    } else if (/[;,\t"\r\n]/.test(colLote)) {
+      fallar('cfg-col-lote', 'No puede llevar comas, punto y coma ni comillas.');
+    }
+
     if (primerError) {
       const el = document.getElementById(primerError);
       if (el) el.focus();
@@ -2435,6 +2602,7 @@
       tipoCambio: tc,
       stockMinimoDefault: min,
       unidadMedida: unidad,
+      csvColumnaLote: colLote,
       csvDelimitador: $('#cfg-delim').value
     });
 
@@ -2711,6 +2879,7 @@
         case 'eliminar': eliminarProducto(id); break;
         case 'ajustar-stock': abrirAjusteStock(id); break;
         case 'editar-stock': editarStockEnLinea(btn, id); break;
+        case 'editar-lote': editarLoteEnLinea(btn, id); break;
         case 'refrescar-historial': refrescarHistorial(); break;
         case 'ver-stock-bajo':
           ui.stock = 'bajo'; ui.pagina = 1;
@@ -2903,6 +3072,7 @@
       $('#cfg-tc').value = String(def.tipoCambio);
       $('#cfg-stock-min').value = String(def.stockMinimoDefault);
       $('#cfg-unidad').value = def.unidadMedida;
+      $('#cfg-col-lote').value = def.csvColumnaLote;
       $('#cfg-delim').value = def.csvDelimitador;
       limpiarErrores($('#form-config'));
       toast('info', 'Valores por defecto cargados', 'Tocá “Guardar cambios” para aplicarlos.');

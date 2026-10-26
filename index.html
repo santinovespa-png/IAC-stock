@@ -294,8 +294,15 @@
                   <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
                 </div>
 
+                <div class="field carga__lote">
+                  <label for="carga-lote">3 · Lote</label>
+                  <input type="text" id="carga-lote" maxlength="40" autocomplete="off"
+                         placeholder="Opcional">
+                  <span class="field__hint">Se guarda con el producto</span>
+                </div>
+
                 <div class="field carga__modo">
-                  <label>3 · Acción</label>
+                  <label>4 · Acción</label>
                   <div class="seg seg--full" role="group" aria-label="Qué hacer con la cantidad">
                     <button type="button" data-carga-modo="fijar" aria-pressed="true">Dejar en</button>
                     <button type="button" data-carga-modo="sumar" aria-pressed="false">Sumar</button>
@@ -321,6 +328,7 @@
                 <span class="carga__sel-label">Stock actual</span>
                 <strong id="carga-sel-stock">—</strong>
                 <span class="carga__sel-cajas" id="carga-sel-cajas"></span>
+                <span class="carga__sel-lote" id="carga-sel-lote"></span>
               </div>
             </div>
 
@@ -398,8 +406,8 @@
           <div class="table-wrap">
             <table class="data" id="tabla-productos">
               <caption class="sr-only">
-                Listado de productos. El stock está en unidades y se puede editar
-                haciendo clic sobre el número.
+                Listado de productos. El stock está en unidades y tanto el stock
+                como el número de lote se editan haciendo clic sobre su recuadro.
               </caption>
               <thead>
                 <tr>
@@ -408,11 +416,12 @@
                   <th class="sortable" data-sort="descripcion" aria-sort="none" scope="col">Descripción</th>
                   <th class="sortable" data-sort="sistema" aria-sort="none" scope="col">Sistema</th>
                   <th class="sortable num" data-sort="stock" aria-sort="none" scope="col">Stock (u)</th>
+                  <th class="sortable" data-sort="lote" aria-sort="none" scope="col">Lote</th>
                   <th class="sortable num" data-sort="stock_minimo" aria-sort="none" scope="col">Mín.</th>
-                  <th class="sortable num" data-sort="presentacion_caja" aria-sort="none" scope="col">u/caja</th>
-                  <th class="sortable num" data-sort="precio_usd" aria-sort="none" scope="col">USD / caja</th>
-                  <th class="sortable num" data-sort="precio_ars_caja" aria-sort="none" scope="col">AR$ / caja</th>
-                  <th class="sortable num" data-sort="precio_ars_unidad" aria-sort="none" scope="col">AR$ / unidad</th>
+                  <th class="sortable num" data-sort="presentacion_caja" aria-sort="none" scope="col">u/cj</th>
+                  <th class="sortable num" data-sort="precio_usd" aria-sort="none" scope="col">USD/cj</th>
+                  <th class="sortable num" data-sort="precio_ars_caja" aria-sort="none" scope="col">AR$/cj</th>
+                  <th class="sortable num" data-sort="precio_ars_unidad" aria-sort="none" scope="col">AR$/u</th>
                   <th class="sortable" data-sort="ultimo_movimiento" aria-sort="none" scope="col">Últ. mov.</th>
                   <th scope="col" style="text-align:right">Acciones</th>
                 </tr>
@@ -444,7 +453,7 @@
             <div class="export-card__icon"><i class="fa-solid fa-file-csv" aria-hidden="true"></i></div>
             <h3>Exportar para Tango Gestión</h3>
             <p>CSV con el precio de venta por unidad en AR$, listo para importar al maestro de artículos.</p>
-            <code>COD_ARTICU · DESCRIPCIO · PRECIO_VTA · UNIDAD_MEDIDA · RUBRO</code>
+            <code>COD_ARTICU · DESCRIPCIO · PRECIO_VTA · UNIDAD_MEDIDA · RUBRO · NRO_LOTE</code>
             <button type="button" class="btn" data-action="export-tango">
               <i class="fa-solid fa-download" aria-hidden="true"></i> Descargar CSV
             </button>
@@ -521,6 +530,13 @@
                   <label for="cfg-unidad">Unidad de medida (Tango) <span class="req">*</span></label>
                   <input type="text" id="cfg-unidad" maxlength="20" required>
                   <span class="field__hint">Se exporta en la columna UNIDAD_MEDIDA</span>
+                  <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
+                </div>
+
+                <div class="field">
+                  <label for="cfg-col-lote">Nombre de la columna de lote (Tango) <span class="req">*</span></label>
+                  <input type="text" id="cfg-col-lote" maxlength="30" required>
+                  <span class="field__hint">Cambialo si tu Tango espera otro encabezado (PARTIDA, NRO_PARTIDA…)</span>
                   <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
                 </div>
 
@@ -647,6 +663,13 @@
           <label for="p-stock">Stock actual (unidades) <span class="req">*</span></label>
           <input type="number" id="p-stock" min="0" step="1" required inputmode="numeric">
           <span class="field__hint" id="p-stock-cajas">&nbsp;</span>
+          <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
+        </div>
+
+        <div class="field">
+          <label for="p-lote">Número de lote</label>
+          <input type="text" id="p-lote" maxlength="40" autocomplete="off" placeholder="Opcional">
+          <span class="field__hint">Se exporta a Tango junto con el artículo</span>
           <span class="field__error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span></span>
         </div>
 

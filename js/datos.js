@@ -193,6 +193,7 @@ const Datos = (function () {
       precio_usd: Number(f.precio_usd) || 0,
       stock: Number(f.stock) || 0,
       stock_minimo: Number(f.stock_minimo) || 0,
+      lote: f.lote || '',
       observaciones: f.observaciones || '',
       ultimo_movimiento: f.ultimo_movimiento || null,
       ultimo_movimiento_detalle: f.ultimo_movimiento_detalle || null,
@@ -214,6 +215,7 @@ const Datos = (function () {
       precio_usd: p.precio_usd,
       stock: p.stock,
       stock_minimo: p.stock_minimo,
+      lote: p.lote || '',
       observaciones: p.observaciones || '',
       ultimo_movimiento: p.ultimo_movimiento,
       ultimo_movimiento_detalle: p.ultimo_movimiento_detalle,
@@ -334,6 +336,7 @@ const Datos = (function () {
         descripcion: p.descripcion,
         delta: delta,
         stock_resultante: p.stock,
+        lote: p.lote || null,
         motivo: motivo || null,
         usuario: estado.usuario ? estado.usuario.email : null
       });
@@ -401,7 +404,15 @@ const Datos = (function () {
       return new Error('Tu usuario no tiene permiso para ' + accion + '. ' +
         'Verificá que ejecutaste supabase/schema.sql completo.');
     }
-    if (code === '42P01' || /does not exist/i.test(msg)) {
+    // La base existe pero le falta una columna: pasa cuando se actualiza la
+    // aplicación y todavía no se volvió a correr el schema.
+    if (code === 'PGRST204' || code === '42703' ||
+        /column .* does not exist|could not find the .* column/i.test(msg)) {
+      return new Error('La base de datos está desactualizada: le falta una columna ' +
+        '(por ejemplo la de lote). Volvé a ejecutar supabase/schema.sql completo ' +
+        'en el SQL Editor de Supabase; es seguro correrlo de nuevo.');
+    }
+    if (code === '42P01' || /relation .* does not exist/i.test(msg)) {
       return new Error('Faltan las tablas en Supabase. ' +
         'Ejecutá el archivo supabase/schema.sql en el SQL Editor.');
     }

@@ -688,7 +688,7 @@ table.data td.cell-actions { white-space: nowrap; text-align: right; }
 
 #tabla-productos thead th:last-child { top: 0; z-index: 3; background-color: var(--surface-2); }
 
-table.data td.cell-desc { max-width: 240px; }
+table.data td.cell-desc { max-width: 190px; }
 
 .cell-desc__text {
   display: block;
@@ -1522,4 +1522,75 @@ kbd {
   .header__user { display: none; }
   .carga__sel { flex-direction: column; align-items: flex-start; }
   .carga__sel-stock { text-align: left; }
+}
+
+/* ---------------------- Numero de lote en la tabla ---------------------- */
+
+/* Recuadro siempre visible: se ve como un campo aunque no se este editando,
+   para que quede claro que ahi se escribe. Un clic lo convierte en input. */
+.lote-box {
+  display: inline-block;
+  min-width: 86px;
+  max-width: 150px;
+  padding: 3px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  cursor: text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: border-color .14s ease, background .14s ease;
+}
+
+.lote-box:hover { border-color: var(--series-1); background: var(--series-1-soft); }
+
+/* Sin lote cargado: borde punteado y guion tenue, para que se note el hueco */
+.lote-box.is-vacio {
+  border-style: dashed;
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+.lote-input {
+  width: 140px;
+  padding: 4px 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-color: var(--series-1);
+  box-shadow: 0 0 0 3px var(--series-1-soft);
+}
+
+table.data td.cell-lote { white-space: nowrap; }
+
+/* Lote dentro de la ficha de carga rapida */
+.carga__sel-lote {
+  display: block;
+  font-size: 11px;
+  color: var(--text-2);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* La grilla de carga rapida ahora tiene un campo mas */
+.carga__grid {
+  grid-template-columns:
+    minmax(0, 1.9fr) minmax(0, .8fr) minmax(0, 1fr) minmax(0, 1.3fr) auto;
+}
+
+@media (max-width: 1200px) {
+  .carga__grid { grid-template-columns: minmax(0, 1.6fr) minmax(0, .9fr) minmax(0, 1fr); }
+  .carga__modo { grid-column: 1 / 3; }
+  .carga__ok { grid-column: 3 / 4; }
+}
+
+@media (max-width: 900px) {
+  .carga__grid { grid-template-columns: minmax(0, 1fr); }
+  .carga__modo, .carga__ok { grid-column: auto; }
 }

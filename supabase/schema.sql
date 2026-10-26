@@ -28,6 +28,7 @@ create table if not exists public.productos (
   -- Stock y mínimo EN UNIDADES
   stock                     integer     not null default 0  check (stock >= 0),
   stock_minimo              integer     not null default 5  check (stock_minimo >= 0),
+  lote                      text        not null default '',
   observaciones             text        not null default '',
   ultimo_movimiento         timestamptz,
   ultimo_movimiento_detalle text,
@@ -67,6 +68,7 @@ create table if not exists public.movimientos (
   descripcion      text,
   delta            integer not null,          -- en unidades; negativo = salida
   stock_resultante integer not null,
+  lote             text,                      -- lote involucrado en el movimiento
   motivo           text,
   usuario          text,
   creado_en        timestamptz not null default now()
@@ -74,6 +76,20 @@ create table if not exists public.movimientos (
 
 create index if not exists movimientos_fecha on public.movimientos (creado_en desc);
 create index if not exists movimientos_producto on public.movimientos (producto_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 3b. ACTUALIZACIONES SOBRE BASES YA CREADAS
+--
+--     Si ya habías ejecutado una versión anterior de este archivo, estas
+--     líneas agregan lo que falta sin tocar los datos que tengas cargados.
+--     Volver a ejecutar todo el archivo es seguro.
+-- ----------------------------------------------------------------------------
+alter table public.productos
+  add column if not exists lote text not null default '';
+
+alter table public.movimientos
+  add column if not exists lote text;
 
 
 -- ----------------------------------------------------------------------------
@@ -158,9 +174,13 @@ $$;
 --    Al terminar deberías ver las tres tablas con RLS en true.
 -- ----------------------------------------------------------------------------
 select
-  relname  as tabla,
-  relrowsecurity as rls_activo
-from pg_class
-where relname in ('productos', 'config', 'movimientos')
-  and relnamespace = 'public'::regnamespace
-order by relname;
+  c.relname  as tabla,
+  c.relrowsecurity as rls_activo,
+  (select count(*) from information_schema.columns
+    where table_schema = 'public'
+      and table_name = c.relname
+      and column_name = 'lote') = 1 as tiene_columna_lote
+from pg_class c
+where c.relname in ('productos', 'config', 'movimientos')
+  and c.relnamespace = 'public'::regnamespace
+order by c.relname;
